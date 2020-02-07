@@ -107,26 +107,51 @@ int main() {
                     }
 
                     bool too_close = false;
+                    bool left_lane_free = true;
+                    bool right_lane_free = true;
 
                     // find ref_vel to use
                     for (int i = 0; i < sensor_fusion.size(); i++) {
                         // cur is in ego lane
                         float d = sensor_fusion[i][6];
-                        if (d < (2 + 4 * lane + 2) && d > (2 + 4 * lane - 2)) {
-                            double vx = sensor_fusion[i][3];
-                            double vy = sensor_fusion[i][4];
-                            double check_speed = sqrt(vx * vx + vy * vy);
-                            double check_car_s = sensor_fusion[i][5];
+                        double vx = sensor_fusion[i][3];
+                        double vy = sensor_fusion[i][4];
+                        double check_speed = sqrt(vx * vx + vy * vy);
+                        double check_car_s = sensor_fusion[i][5];
 
-                            check_car_s += ((double) prev_size * 0.02 * check_speed);
+                        check_car_s += ((double) prev_size * 0.02 * check_speed);
+
+                        if (d < (2 + 4 * lane + 2) && d > (2 + 4 * lane - 2)) {
                             if ((check_car_s > car_s) && ((check_car_s - car_s) < 30)) {
                                 too_close = true;
                             }
+                        }
+
+                        if (lane != 0) {
+                            if (d < (2 + 4 * (lane - 1) + 2) && d > (2 + 4 * (lane - 1) - 2)) {
+                                if (abs(check_car_s - car_s) < 30) {
+                                    left_lane_free = false;
+                                }
+                            }
+                        } else {
+                            left_lane_free = false;
+                        }
+
+                        if (lane != 2) {
+                            if (d < (2 + 4 * (lane + 1) + 2) && d > (2 + 4 * (lane + 1) - 2)) {
+                                if (abs(check_car_s - car_s) < 30) {
+                                    right_lane_free = false;
+                                }
+                            }
+                        } else {
+                            right_lane_free = false;
                         }
                     }
 
                     if (too_close) {
                         ref_vel -= .224;
+                        if (left_lane_free) { lane--; }
+                        else if (right_lane_free) { lane++; }
                     } else if (ref_vel < 49.5) {
                         ref_vel += 0.224;
                     }
